@@ -1,4 +1,3 @@
-// App.js
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
@@ -38,32 +37,32 @@ function App() {
     setHasSubmittedToday(submitted);
   };
 
-const handleSubmit = async () => {
-  try {
-    if (editingId) {
-      await axios.put(`http://localhost:5000/api/reports/${editingId}`, {
-        ...form,
-        status: 'Pending',
-      });
-      setEditingId(null);
-    } else {
-      if (hasSubmittedToday) return;
-      await axios.post('http://localhost:5000/api/reports', { ...form, status: 'Pending' });
-      setHasSubmittedToday(true);
-    }
+  const handleSubmit = async () => {
+    try {
+      if (editingId) {
+        await axios.put(`http://localhost:5000/api/reports/${editingId}`, {
+          ...form,
+          status: 'Pending',
+        });
+        setEditingId(null);
+      } else {
+        if (hasSubmittedToday) return;
+        await axios.post('http://localhost:5000/api/reports', { ...form, status: 'Pending' });
+        setHasSubmittedToday(true);
+      }
 
-    fetchLogs(form.date);
-    setForm((prev) => ({
-      ...prev,
-      workDone: '',
-      workedHours: '',
-      pendingWork: '',
-      workMode: 'Work From Home',
-    }));
-  } catch (err) {
-    alert(err.response?.data?.error || 'Error submitting log');
-  }
-};
+      fetchLogs(form.date);
+      setForm((prev) => ({
+        ...prev,
+        workDone: '',
+        workedHours: '',
+        pendingWork: '',
+        workMode: 'Work From Home',
+      }));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error submitting log');
+    }
+  };
 
   const handleLeave = async () => {
     try {
@@ -99,6 +98,15 @@ const handleSubmit = async () => {
     if (formRef.current) formRef.current.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/reports/${id}`);
+      fetchLogs(form.date);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error deleting log');
+    }
+  };
+
   const summary = {
     worked: logs.filter(l => l.workDone !== 'Leave' && ['Pending', 'Approved'].includes(l.status)).length,
     leave: logs.filter(l => l.workDone === 'Leave').length,
@@ -107,6 +115,8 @@ const handleSubmit = async () => {
     offline: logs.filter(l => l.workMode === 'Offline').length,
     wfh: logs.filter(l => l.workMode === 'Work From Home').length,
   };
+
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <>
@@ -168,7 +178,15 @@ const handleSubmit = async () => {
                         <td className={`status ${log.status?.toLowerCase() || ''}`}>{log.status || '-'}</td>
                         <td>
                           {(log.status === 'Pending' || log.status === 'Rejected') && (
-                            <button onClick={() => handleEdit(log)}>Edit</button>
+                            <div className="action-buttons">
+                              {log.workDone !== 'Leave' ? (
+                                <button onClick={() => handleEdit(log)}>Edit</button>
+                              ) : (
+                                log.date === today && (
+                                  <button onClick={() => handleDelete(log.id)}>Delete</button>
+                                )
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>
